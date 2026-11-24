@@ -1,97 +1,36 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Fitness App — React Native UI & Animation
 
-# Getting Started
+Bare React Native CLI app (RN 0.88, New Architecture, Hermes). Mock data only.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
-
-## Step 1: Start Metro
-
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
+## Run
 
 ```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+npm install
+npx react-native start
+npx react-native run-android
 ```
 
-## Step 2: Build and run your app
+Release APK: `cd android && ./gradlew assembleRelease` → `android/app/build/outputs/apk/release/app-release.apk`
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## What's in it
 
-### Android
+**Onboarding (10 steps, one screen)**: gender → age → weight → height → goal → target weight → timeline → activity → experience → training days → "Personalizing" → Home.
+Steps slide in the direction you move (Next/Skip/Back and the Android back button). The blue corner arc grows as you progress, and list rows enter one after another.
 
-```sh
-# Using npm
-npm run android
+**Weight dial** ([src/components/scales.tsx](src/components/scales.tsx)): 341 ticks, 1° each (0.5 kg or 1 lb per tick). Dragging maps the finger's *angle* around the dial centre to rotation, so the dial turns in a circle under a fixed pointer. On release, the angular velocity (`(r × v) / |r|²`) is projected a short time ahead. A spring that starts at the finger's velocity then carries it into the nearest detent, so momentum and snap happen in one continuous motion. Touching a dial that is still moving stops it, like a real one. A slower outer ring adds parallax.
 
-# OR using Yarn
-yarn android
-```
+**Height ruler**: the same physics engine (`useTickScale`) driven by vertical pan. It supports cm and ft/in, and labels brighten near the pointer.
 
-### iOS
+**Both scales**: everything runs on the UI thread (Reanimated 4 + Gesture Handler 3). One haptic tick per detent crossed, and the number updates live. Switching Kg/Lbs or CM/Feet converts the value and glides the scale to it. Dragging past either end rubber-bands.
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+**Age wheel**: three native snapping ScrollViews. Rows fade by distance, each row change gives a haptic, invalid days are clamped (Feb 31 → Feb 28/29), and the age is computed live.
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+**Home**: greeting, today's plan with an animated ring, a bento of Gyms / Play / Events tiles, an events carousel and nearby gyms.
 
-```sh
-bundle install
-```
+**Inner pages (designed in the same style)**: Gyms (search + filters), Play (courts by sport), Events (by category), Event Details (parallax hero, header that fades in on scroll, attendees, spots left), and Booking. Booking is one screen for gym passes, court slots + duration, and event tickets. It ends with an animated confirmation and receipt.
 
-Then, and every time you update your native dependencies, run:
+Every tappable element springs on press and gives a light haptic.
 
-```sh
-bundle exec pod install
-```
+## Stack
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+`react-native-reanimated` 4 · `react-native-gesture-handler` 3 · `react-native-svg` · `@react-navigation/native-stack` · `react-native-haptic-feedback` · `lucide-react-native` · Lexend + Montserrat fonts.
