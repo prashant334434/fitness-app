@@ -206,7 +206,7 @@ export default function Booking({ navigation, route }: NativeStackScreenProps<St
           <View style={[st.divider, { top: 49, backgroundColor: C.ink }]} />
           <Ico icon={ICON.person} style={[st.abs, { left: 16, top: 65 }]} />
           <Text style={[T.body12, st.abs, { left: 38, top: 65.6 }]}>{USER.name}</Text>
-          <Tap style={[st.abs, { left: 322, top: 66 }]} hitSlop={12} accessibilityRole="button" accessibilityLabel="Edit invoice details">
+          <Tap style={[st.abs, { right: 16, top: 66 }]} hitSlop={12} accessibilityRole="button" accessibilityLabel="Edit invoice details">
             <Ico icon={ICON.edit} />
           </Tap>
           {[
@@ -276,7 +276,7 @@ const st = StyleSheet.create({
   dash: { marginTop: 2.77 },
 
   coupon: { marginTop: 30, marginHorizontal: 18, height: 64, borderRadius: 16, backgroundColor: C.surface },
-  apply: { position: 'absolute', left: 268.25, top: 17, width: 70.5, height: 30, borderRadius: 15, backgroundColor: C.action, alignItems: 'center', paddingTop: 8.34 },
+  apply: { position: 'absolute', right: 15.25, top: 17, width: 70.5, height: 30, borderRadius: 15, backgroundColor: C.action, alignItems: 'center', paddingTop: 8.34 },
   applied: { backgroundColor: C.rating },
   applyText: { color: '#FFFFFF' },
 

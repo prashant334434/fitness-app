@@ -23,10 +23,10 @@ function HeroChrome({ d, liked, onBack, onLike, onShare }: { d: EventDetail; lik
       <Tap testID="hero-back" onPress={onBack} scaleTo={0.9} style={[st.heroBtn, { left: 18 }, chrome && st.glass]} accessibilityRole="button" accessibilityLabel="Back">
         {chrome ? <ChevronLeft color="#fff" size={22} strokeWidth={2} /> : null}
       </Tap>
-      <Tap testID="hero-like" onPress={onLike} scaleTo={0.9} style={[st.heroBtn, { left: 282 }, chrome && st.glass]} accessibilityRole="button" accessibilityLabel="Like" accessibilityState={{ selected: liked }}>
+      <Tap testID="hero-like" onPress={onLike} scaleTo={0.9} style={[st.heroBtn, { right: 68 }, chrome && st.glass]} accessibilityRole="button" accessibilityLabel="Like" accessibilityState={{ selected: liked }}>
         {chrome || liked ? <Heart color={liked ? '#EF4444' : '#fff'} fill={liked ? '#EF4444' : 'transparent'} size={18} strokeWidth={2} /> : null}
       </Tap>
-      <Tap testID="hero-share" onPress={onShare} scaleTo={0.9} style={[st.heroBtn, { left: 332 }, chrome && st.glass]} accessibilityRole="button" accessibilityLabel="Share">
+      <Tap testID="hero-share" onPress={onShare} scaleTo={0.9} style={[st.heroBtn, { right: 18 }, chrome && st.glass]} accessibilityRole="button" accessibilityLabel="Share">
         {chrome ? <Upload color="#fff" size={17} strokeWidth={2} /> : null}
       </Tap>
     </>
@@ -43,7 +43,7 @@ function LinkCard({ icon, title, sub, iconTop, onPress, style }: { icon: any; ti
       <Text style={[T.body12, st.linkSub]} numberOfLines={1}>
         {sub}
       </Text>
-      <Ico icon={ICON.chevron} style={[st.abs, { left: 331, top: 23 }]} />
+      <Ico icon={ICON.chevron} style={[st.abs, { right: 14, top: 23 }]} />
     </Tap>
   );
 }
@@ -224,7 +224,7 @@ const st = StyleSheet.create({
   abs: { position: 'absolute' },
 
   hero: { height: HERO_H, borderBottomLeftRadius: 38, borderBottomRightRadius: 38, overflow: 'hidden' },
-  heroImg: { width: 390, height: HERO_H },
+  heroImg: { width: '100%', height: HERO_H },
   heroBtn: { position: 'absolute', top: 41, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   glass: { borderWidth: 1, borderColor: C.glass, backgroundColor: 'rgba(0,0,0,0.12)' },
 

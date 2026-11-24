@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Extrapolation,
@@ -34,15 +34,17 @@ type Nav = NativeStackScreenProps<Stack, 'Home'>['navigation'];
 /* ------------------------------------------------------------------ header */
 
 function Glow() {
+  const { width } = useWindowDimensions();
+  const rx = (width * 198) / 390;
   return (
-    <Svg width={390} height={190} style={st.glow} pointerEvents="none">
+    <Svg width={width} height={190} style={st.glow} pointerEvents="none">
       <Defs>
-        <RadialGradient id="glow" cx={195} cy={40} rx={198} ry={150} gradientUnits="userSpaceOnUse">
+        <RadialGradient id="glow" cx={width / 2} cy={40} rx={rx} ry={150} gradientUnits="userSpaceOnUse">
           <Stop offset="0" stopColor="#19222F" />
           <Stop offset="1" stopColor={C.bg} />
         </RadialGradient>
       </Defs>
-      <Ellipse cx={195} cy={40} rx={198} ry={150} fill="url(#glow)" />
+      <Ellipse cx={width / 2} cy={40} rx={rx} ry={150} fill="url(#glow)" />
     </Svg>
   );
 }
@@ -66,9 +68,10 @@ function Header() {
 }
 
 function SearchBar() {
+  const w = useWindowDimensions().width - 36;
   return (
     <Tap style={st.search} scaleTo={0.98} accessibilityRole="search" accessibilityLabel="Search">
-      <Svg width={354} height={44} style={StyleSheet.absoluteFill}>
+      <Svg width={w} height={44} style={StyleSheet.absoluteFill}>
         <Defs>
           <LinearGradient id="sb" x1="0" y1="0" x2="1" y2="0">
             <Stop offset="0" stopColor="#3F3313" />
@@ -76,7 +79,7 @@ function SearchBar() {
             <Stop offset="1" stopColor="#182F38" />
           </LinearGradient>
         </Defs>
-        <Rect x={0.5} y={0.5} width={353} height={43} rx={21.5} fill="#0F1010" stroke="url(#sb)" strokeWidth={1} />
+        <Rect x={0.5} y={0.5} width={w - 1} height={43} rx={21.5} fill="#0F1010" stroke="url(#sb)" strokeWidth={1} />
       </Svg>
       <Ico icon={ICON.search} style={st.searchIcon} />
       <Text style={[T.body12, st.searchText]}>Search by “Cricket Court”</Text>
@@ -129,6 +132,7 @@ function SpotCard({ item, index, x }: { item: Spotlight; index: number; x: Share
 }
 
 function SpotlightCarousel() {
+  const side = (useWindowDimensions().width - SPOT_W) / 2;
   const x = useSharedValue(SPOT_STRIDE);
   const [active, setActive] = useState(1);
   const onScroll = useAnimatedScrollHandler(e => {
@@ -148,7 +152,7 @@ function SpotlightCarousel() {
         snapToInterval={SPOT_STRIDE}
         decelerationRate="fast"
         contentOffset={{ x: SPOT_STRIDE, y: 0 }}
-        contentContainerStyle={st.spotRow}
+        contentContainerStyle={[st.spotRow, { paddingHorizontal: side }]}
         style={st.spotScroll}>
         {SPOTLIGHT.map((it, i) => (
           <SpotCard key={it.id} item={it} index={i} x={x} />
@@ -262,7 +266,7 @@ function Rail({ children, gap = 8 }: { children: React.ReactNode; gap?: number }
 function PersonalizeBanner({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
   return (
     <View style={st.banner} testID="personalize-banner">
-      <Svg width={354} height={117} style={StyleSheet.absoluteFill}>
+      <Svg width="100%" height={117} style={StyleSheet.absoluteFill}>
         <Defs>
           <LinearGradient id="bn" x1="0" y1="0" x2="1" y2="0">
             <Stop offset="0" stopColor="#E1F3D5" />
@@ -274,7 +278,7 @@ function PersonalizeBanner({ onStart, onSkip }: { onStart: () => void; onSkip: (
             <Stop offset="1" stopColor="#9CADC5" />
           </LinearGradient>
         </Defs>
-        <Rect width={354} height={117} fill="url(#bn)" />
+        <Rect width="100%" height={117} fill="url(#bn)" />
       </Svg>
       <Image source={IMG.home.banner} style={st.bannerArt} />
       <Text style={[T.semi12, st.bannerTitle]}>Personalize your fitness journey</Text>
@@ -351,9 +355,9 @@ const st = StyleSheet.create({
   headerText: { position: 'absolute', left: 50, top: 5.75, width: 217 },
   headerChevron: { marginLeft: 2.36, marginTop: 5.25 },
   address: { marginTop: 1.85 },
-  avatar: { position: 'absolute', left: 327, top: 0, width: 45, height: 45, borderRadius: 22.5 },
+  avatar: { position: 'absolute', right: 18, top: 0, width: 45, height: 45, borderRadius: 22.5 },
 
-  search: { marginTop: 30, marginLeft: 18, width: 354, height: 44 },
+  search: { marginTop: 30, marginHorizontal: 18, height: 44 },
   searchIcon: { position: 'absolute', left: 16, top: 12 },
   searchText: { position: 'absolute', left: 46.94, top: 13.66 },
 
@@ -362,7 +366,7 @@ const st = StyleSheet.create({
 
   spotHead: { marginTop: 29.92, marginLeft: 18 },
   spotScroll: { marginTop: 14.75, height: SPOT_H },
-  spotRow: { paddingHorizontal: 92, gap: SPOT_STRIDE - SPOT_W, alignItems: 'flex-end' },
+  spotRow: { gap: SPOT_STRIDE - SPOT_W, alignItems: 'flex-end' },
   spot: { width: SPOT_W, height: SPOT_H, borderRadius: 14, overflow: 'hidden', transformOrigin: 'bottom' },
   spotTitle: { marginTop: 8.03, textAlign: 'center' },
   spotSub: { marginTop: 2.68, textAlign: 'center', color: C.muted },
@@ -388,8 +392,8 @@ const st = StyleSheet.create({
   evVenue: { marginTop: 4.56, color: C.muted, width: 169 },
   evPrice: { marginTop: 5.38, color: C.muted },
 
-  banner: { marginTop: 28, marginLeft: 18, width: 354, height: 117, borderRadius: 18, overflow: 'hidden' },
-  bannerArt: { position: 'absolute', left: 214, top: 0, width: 140, height: 117 },
+  banner: { marginTop: 28, marginHorizontal: 18, height: 117, borderRadius: 18, overflow: 'hidden' },
+  bannerArt: { position: 'absolute', right: 0, top: 0, width: 140, height: 117 },
   bannerTitle: { position: 'absolute', left: 14.87, top: 21.21, color: C.ink },
   bannerSub: { position: 'absolute', left: 14.98, top: 42.34, width: 200, lineHeight: 12, color: C.inkSoft },
   bannerActions: { position: 'absolute', left: 14.95, top: 84.73, flexDirection: 'row' },
