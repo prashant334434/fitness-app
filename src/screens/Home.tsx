@@ -1,260 +1,397 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { Easing, FadeInDown, useAnimatedProps, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
-import Svg, { Circle } from 'react-native-svg';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  SharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  runOnJS,
+} from 'react-native-reanimated';
+import Svg, { Defs, Ellipse, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Bell, CalendarDays, ChevronRight, Dumbbell, Flame, Footprints, Timer, Trophy } from 'lucide-react-native';
 import { Tap } from '../components/ui';
-import { EventCard, Rating, Shade } from '../components/cards';
-import { EVENTS, GYMS } from '../data';
-import { C, F, PAD } from '../theme';
+import { Dot, Ico, RatingBadge, SectionHeader } from '../components/kit';
+import { ICON, IMG } from '../assets/design';
+import { COURTS_NEAR, EXPLORE, FITNESS_EVENTS, FeedEvent, SPOTLIGHT, Spotlight, TOP_GYMS, USER, Venue } from '../feed';
+import { C, T } from '../theme';
 import type { Stack } from '../nav';
+import { useDevScroll } from '../dev';
 
-const ACircle = Animated.createAnimatedComponent(Circle);
-const WEEK = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const enter = (i: number) => FadeInDown.delay(80 + i * 90).duration(500).easing(Easing.bezier(0.22, 1, 0.36, 1));
+/* Geometry (pt) from the 390pt-wide export. */
+export const DESIGN_TOP = 40; // header row starts 40pt below the top edge
+const CARD_W = 236;
+const CARD_GAP = 11;
+const SPOT_W = 206;
+const SPOT_H = 284;
+const SPOT_STRIDE = 206.5;
+const SPOT_SIDE_SCALE = 258 / 284;
 
-function Ring({ value }: { value: number }) {
-  const R = 30;
-  const L = 2 * Math.PI * R;
-  const p = useSharedValue(0);
-  useEffect(() => {
-    p.value = withDelay(400, withTiming(value, { duration: 1200, easing: Easing.out(Easing.cubic) }));
-  }, [p, value]);
-  const props = useAnimatedProps(() => ({ strokeDashoffset: L * (1 - p.value) }));
+type Nav = NativeStackScreenProps<Stack, 'Home'>['navigation'];
+
+/* ------------------------------------------------------------------ header */
+
+function Glow() {
   return (
-    <View style={{ width: 76, height: 76, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={76} height={76} style={StyleSheet.absoluteFill}>
-        <Circle cx={38} cy={38} r={R} stroke="#222" strokeWidth={7} fill="none" />
-        <ACircle
-          cx={38}
-          cy={38}
-          r={R}
-          stroke={C.blue}
-          strokeWidth={7}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={L}
-          animatedProps={props}
-          transform="rotate(-90 38 38)"
-        />
-      </Svg>
-      <Flame size={18} color={C.blue} />
+    <Svg width={390} height={190} style={st.glow} pointerEvents="none">
+      <Defs>
+        <RadialGradient id="glow" cx={195} cy={40} rx={198} ry={150} gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor="#19222F" />
+          <Stop offset="1" stopColor={C.bg} />
+        </RadialGradient>
+      </Defs>
+      <Ellipse cx={195} cy={40} rx={198} ry={150} fill="url(#glow)" />
+    </Svg>
+  );
+}
+
+function Header() {
+  return (
+    <View style={st.header}>
+      <Ico icon={ICON.pinFilled} style={st.headerPin} />
+      <Tap style={st.headerText} scaleTo={0.98} accessibilityRole="button" accessibilityLabel="Change location">
+        <View style={st.row}>
+          <Text style={T.label12}>Location</Text>
+          <Ico icon={ICON.chevronDown} style={st.headerChevron} />
+        </View>
+        <Text style={[T.body12, st.address]} numberOfLines={1}>
+          {USER.location}
+        </Text>
+      </Tap>
+      <Image source={USER.avatar} style={st.avatar} accessibilityLabel="Profile" />
     </View>
   );
 }
 
-function Tile({ title, sub, image, Icon, onPress, tall }: { title: string; sub: string; image: string; Icon: any; onPress: () => void; tall?: boolean }) {
+function SearchBar() {
   return (
-    <Tap onPress={onPress} scaleTo={0.96} style={[st.tile, { height: tall ? 232 : 110 }]}>
-      <Image source={{ uri: image }} style={StyleSheet.absoluteFill} />
-      <Shade from={0} />
-      <View style={st.tileIcon}>
-        <Icon size={16} color="#fff" />
-      </View>
-      <View style={st.tileText}>
-        <Text style={st.tileTitle}>{title}</Text>
-        <Text style={st.tileSub}>{sub}</Text>
-      </View>
+    <Tap style={st.search} scaleTo={0.98} accessibilityRole="search" accessibilityLabel="Search">
+      <Svg width={354} height={44} style={StyleSheet.absoluteFill}>
+        <Defs>
+          <LinearGradient id="sb" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor="#3F3313" />
+            <Stop offset="0.4" stopColor="#261C36" />
+            <Stop offset="1" stopColor="#182F38" />
+          </LinearGradient>
+        </Defs>
+        <Rect x={0.5} y={0.5} width={353} height={43} rx={21.5} fill="#0F1010" stroke="url(#sb)" strokeWidth={1} />
+      </Svg>
+      <Ico icon={ICON.search} style={st.searchIcon} />
+      <Text style={[T.body12, st.searchText]}>Search by “Cricket Court”</Text>
     </Tap>
   );
 }
 
-export default function Home({ navigation, route }: NativeStackScreenProps<Stack, 'Home'>) {
-  const insets = useSafeAreaInsets();
-  const profile = route.params?.profile;
-  const days = parseInt(profile?.days ?? '4', 10) || 4;
-  const hour = new Date().getHours();
-  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const today = (new Date().getDay() + 6) % 7;
+/* ------------------------------------------------------------------ explore */
 
+function Explore({ navigation }: { navigation: Nav }) {
+  const rows = [EXPLORE.slice(0, 4), EXPLORE.slice(4)];
   return (
-    <ScrollView style={st.root} contentContainerStyle={{ paddingTop: Math.max(insets.top, 24) + 8, paddingBottom: insets.bottom + 32 }} showsVerticalScrollIndicator={false}>
-      <Animated.View entering={enter(0)} style={st.top}>
-        <View style={st.avatar}>
-          <Text style={st.avatarText}>A</Text>
-        </View>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={st.greet}>{greet}</Text>
-          <Text style={st.name}>Alex</Text>
-        </View>
-        <Tap style={st.iconBtn} scaleTo={0.9}>
-          <Bell size={18} color="#fff" strokeWidth={1.8} />
-          <View style={st.bellDot} />
-        </Tap>
-      </Animated.View>
-
-      {/* today */}
-      <Animated.View entering={enter(1)} style={st.today}>
-        <View style={st.rowBetween}>
-          <View>
-            <Text style={st.kicker}>TODAY’S PLAN</Text>
-            <Text style={st.todayTitle}>{profile?.goal ?? 'Strength training'}</Text>
-            <Text style={st.todaySub}>
-              {profile ? `${profile.weight} → ${profile.target}` : 'Upper body · 45 min'}
-            </Text>
-          </View>
-          <Ring value={0.62} />
-        </View>
-        <View style={st.stats}>
-          {[
-            { Icon: Flame, v: '412', u: 'kcal' },
-            { Icon: Footprints, v: '6,240', u: 'steps' },
-            { Icon: Timer, v: '42', u: 'min' },
-          ].map(({ Icon, v, u }) => (
-            <View key={u} style={st.stat}>
-              <Icon size={14} color={C.sub} />
-              <Text style={st.statV}>
-                {v} <Text style={st.statU}>{u}</Text>
-              </Text>
-            </View>
-          ))}
-        </View>
-        <View style={st.week}>
-          {WEEK.map((d, i) => {
-            const planned = i % Math.max(1, Math.round(7 / days)) === 0;
-            return (
-              <View key={i} style={{ alignItems: 'center' }}>
-                <Text style={[st.weekD, i === today && { color: C.text }]}>{d}</Text>
-                <View style={[st.weekDot, planned && st.weekPlanned, i === today && st.weekToday]} />
-              </View>
-            );
-          })}
-        </View>
-      </Animated.View>
-
-      {/* explore bento */}
-      <Animated.View entering={enter(2)}>
-        <Text style={st.section}>Explore</Text>
-        <View style={st.bento}>
-          <View style={{ flex: 1 }}>
-            <Tile tall title="Gyms" sub={`${GYMS.length} near you`} Icon={Dumbbell} image={GYMS[0].image} onPress={() => navigation.navigate('Gyms')} />
-          </View>
-          <View style={{ flex: 1, gap: 12 }}>
-            <Tile title="Play" sub="Book a court" Icon={Trophy} image={'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=600&q=70&auto=format&fit=crop'} onPress={() => navigation.navigate('Play')} />
-            <Tile title="Events" sub={`${EVENTS.length} this month`} Icon={CalendarDays} image={EVENTS[1].image} onPress={() => navigation.navigate('Events')} />
-          </View>
-        </View>
-      </Animated.View>
-
-      {/* events */}
-      <Animated.View entering={enter(3)}>
-        <View style={[st.rowBetween, { paddingHorizontal: PAD }]}>
-          <Text style={[st.section, { paddingHorizontal: 0 }]}>Upcoming events</Text>
-          <Tap onPress={() => navigation.navigate('Events')} style={st.seeAll} hitSlop={8}>
-            <Text style={st.seeAllText}>See all</Text>
-            <ChevronRight size={14} color={C.sub} />
-          </Tap>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={272}
-          decelerationRate="fast"
-          contentContainerStyle={{ paddingHorizontal: PAD, gap: 12 }}>
-          {EVENTS.map(e => (
-            <EventCard key={e.id} e={e} width={260} onPress={() => navigation.navigate('EventDetails', { id: e.id })} />
-          ))}
-        </ScrollView>
-      </Animated.View>
-
-      {/* gyms */}
-      <Animated.View entering={enter(4)}>
-        <View style={[st.rowBetween, { paddingHorizontal: PAD }]}>
-          <Text style={[st.section, { paddingHorizontal: 0 }]}>Gyms near you</Text>
-          <Tap onPress={() => navigation.navigate('Gyms')} style={st.seeAll} hitSlop={8}>
-            <Text style={st.seeAllText}>See all</Text>
-            <ChevronRight size={14} color={C.sub} />
-          </Tap>
-        </View>
-        <View style={{ paddingHorizontal: PAD, gap: 10 }}>
-          {GYMS.slice(0, 3).map(g => (
-            <Tap key={g.id} style={st.gymRow} scaleTo={0.97} onPress={() => navigation.navigate('Booking', { kind: 'gym', id: g.id })}>
-              <Image source={{ uri: g.image }} style={st.gymImg} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={st.gymName}>{g.name}</Text>
-                <Text style={st.gymMeta}>
-                  {g.area} · {g.km} km
-                </Text>
-              </View>
-              <Rating v={g.rating} />
+    <View>
+      <Text style={[T.section, st.exploreTitle]}>Explore</Text>
+      {rows.map((row, r) => (
+        <View key={r} style={[st.tiles, { marginTop: r ? 10 : 4.16 }]}>
+          {row.map(t => (
+            <Tap
+              key={t.key}
+              scaleTo={0.94}
+              accessibilityRole="button"
+              accessibilityLabel={t.label}
+              testID={`explore-${t.key}`}
+              onPress={() => (t.route ? navigation.navigate(t.route as never) : undefined)}>
+              {/* tile art (3D icon + tinted card + label) is a single design asset */}
+              <Ico icon={IMG.home.tiles[t.key]} />
             </Tap>
           ))}
         </View>
-      </Animated.View>
+      ))}
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ spotlight */
+
+function SpotCard({ item, index, x }: { item: Spotlight; index: number; x: SharedValue<number> }) {
+  const a = useAnimatedStyle(() => {
+    const d = Math.abs(x.value - index * SPOT_STRIDE);
+    return { transform: [{ scale: interpolate(d, [0, SPOT_STRIDE], [1, SPOT_SIDE_SCALE], Extrapolation.CLAMP) }] };
+  });
+  const art = item.crop
+    ? { position: 'absolute' as const, top: 0, width: 82 / SPOT_SIDE_SCALE, height: SPOT_H, [item.crop === 'right' ? 'right' : 'left']: 0 }
+    : { width: SPOT_W, height: SPOT_H };
+  return (
+    <Animated.View style={[st.spot, a]}>
+      <Image source={item.image} style={art} resizeMode="stretch" />
+    </Animated.View>
+  );
+}
+
+function SpotlightCarousel() {
+  const x = useSharedValue(SPOT_STRIDE);
+  const [active, setActive] = useState(1);
+  const onScroll = useAnimatedScrollHandler(e => {
+    x.value = e.contentOffset.x;
+    const i = Math.round(e.contentOffset.x / SPOT_STRIDE);
+    runOnJS(setActive)(Math.max(0, Math.min(SPOTLIGHT.length - 1, i)));
+  });
+  const cur = SPOTLIGHT[active];
+  return (
+    <View>
+      <Animated.ScrollView
+        horizontal
+        testID="spotlight"
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={SPOT_STRIDE}
+        decelerationRate="fast"
+        contentOffset={{ x: SPOT_STRIDE, y: 0 }}
+        contentContainerStyle={st.spotRow}
+        style={st.spotScroll}>
+        {SPOTLIGHT.map((it, i) => (
+          <SpotCard key={it.id} item={it} index={i} x={x} />
+        ))}
+      </Animated.ScrollView>
+      <Text style={[T.spotTitle, st.spotTitle]}>{cur.title}</Text>
+      <Text style={[T.body10, st.spotSub]}>{cur.subtitle}</Text>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ venue cards */
+
+function Liked({ top }: { top: number }) {
+  const [on, setOn] = useState(false);
+  return (
+    <Tap
+      onPress={() => setOn(v => !v)}
+      scaleTo={0.8}
+      hitSlop={10}
+      style={[st.heart, { top }]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: on }}
+      accessibilityLabel="Save">
+      <Ico icon={ICON.heart} style={on ? st.heartOn : null} />
+    </Tap>
+  );
+}
+
+/** Artwork that may be a partial crop: drawn at native size, pinned top-left. */
+function Art({ src, h }: { src: Venue['image']; h: number }) {
+  return (
+    <View style={[st.art, { height: h }]}>
+      <Ico icon={src} />
+    </View>
+  );
+}
+
+function VenueCard({ v, kind, onPress }: { v: Venue; kind: 'gym' | 'court'; onPress: () => void }) {
+  const gym = kind === 'gym';
+  return (
+    <Tap style={[st.card, { height: gym ? 249 : 268 }]} scaleTo={0.98} onPress={onPress} testID={`venue-${v.id}`} accessibilityRole="button" accessibilityLabel={v.name}>
+      <View style={st.art148}>
+        <Art src={v.image} h={148} />
+        {v.rating ? <RatingBadge value={v.rating} style={st.badge} /> : null}
+        {v.cashback ? (
+          <View style={st.strip}>
+            <Svg width={216} height={20.5} style={StyleSheet.absoluteFill}>
+              <Defs>
+                <LinearGradient id="cb" x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0" stopColor="#4285F4" />
+                  <Stop offset="1" stopColor="#010815" />
+                </LinearGradient>
+              </Defs>
+              <Rect width={216} height={20.5} fill="url(#cb)" />
+            </Svg>
+            <Ico icon={ICON.cashback} style={st.cashIcon} />
+            <Text style={[T.semi8, st.cashText]}>{v.cashback}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={[gym ? T.semi14 : T.med14, gym ? st.gymTitle : st.courtTitle]} numberOfLines={gym ? 1 : 2}>
+        {v.name}
+      </Text>
+      <View style={[st.row, { marginTop: gym ? 2.81 : 6.98 }]}>
+        <Text style={[T.body12, { color: C.muted }]}>{v.km} km</Text>
+        <Dot />
+        <Text style={[T.body12, st.area]} numberOfLines={1}>
+          {v.area}
+        </Text>
+      </View>
+      <View style={[st.priceRow, { marginTop: gym ? 13.42 : 8.57 }]}>
+        <Text style={T.semi14}>
+          {v.price}
+          {v.unit ?? ''}
+        </Text>
+        <Text style={[T.body10, st.onwards]}>Onwards</Text>
+      </View>
+      <Liked top={9 + 148 + 12} />
+    </Tap>
+  );
+}
+
+function EventCard({ e, onPress }: { e: FeedEvent; onPress: () => void }) {
+  return (
+    <Tap style={[st.card, { height: 374 }]} scaleTo={0.98} onPress={onPress} testID={`event-${e.id}`} accessibilityRole="button" accessibilityLabel={e.title}>
+      <View style={[st.art148, { height: 266 }]}>
+        <Art src={e.image} h={266} />
+      </View>
+      <Text style={[T.body10, st.evDate]}>{e.date}</Text>
+      <Text style={[T.med14, st.evTitle]} numberOfLines={1}>
+        {e.title}
+      </Text>
+      <Text style={[T.body10, st.evVenue]} numberOfLines={1}>
+        {e.venue}
+      </Text>
+      <Text style={[T.body11, st.evPrice]}>{e.price} onwards</Text>
+      <Liked top={9 + 266 + 11} />
+    </Tap>
+  );
+}
+
+function Rail({ children, gap = 8 }: { children: React.ReactNode; gap?: number }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: gap }} contentContainerStyle={st.rail} snapToInterval={CARD_W + CARD_GAP} decelerationRate="fast">
+      {children}
     </ScrollView>
+  );
+}
+
+function PersonalizeBanner({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  return (
+    <View style={st.banner} testID="personalize-banner">
+      <Svg width={354} height={117} style={StyleSheet.absoluteFill}>
+        <Defs>
+          <LinearGradient id="bn" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor="#E1F3D5" />
+            <Stop offset="0.25" stopColor="#E5F8DA" />
+            <Stop offset="0.46" stopColor="#E0F0D6" />
+            <Stop offset="0.514" stopColor="#D3EED5" />
+            <Stop offset="0.57" stopColor="#C7E5CD" />
+            <Stop offset="0.605" stopColor="#C2DFCB" />
+            <Stop offset="1" stopColor="#9CADC5" />
+          </LinearGradient>
+        </Defs>
+        <Rect width={354} height={117} fill="url(#bn)" />
+      </Svg>
+      <Image source={IMG.home.banner} style={st.bannerArt} />
+      <Text style={[T.semi12, st.bannerTitle]}>Personalize your fitness journey</Text>
+      <Text style={[T.body10, st.bannerSub]}>Get gym recommendations based on your goals, budget & workout style.</Text>
+      <View style={st.bannerActions}>
+        <Tap onPress={onStart} hitSlop={8} accessibilityRole="button">
+          <Text style={[T.med10, { color: C.action }]}>Personalize now</Text>
+        </Tap>
+        <Tap onPress={onSkip} hitSlop={8} accessibilityRole="button" style={st.bannerSkip}>
+          <Text style={[T.med10, { color: C.inkSoft }]}>Skip</Text>
+        </Tap>
+      </View>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ screen */
+
+export default function Home({ navigation }: NativeStackScreenProps<Stack, 'Home'>) {
+  const insets = useSafeAreaInsets();
+  const dev = useDevScroll();
+  const [showBanner, setShowBanner] = useState(true);
+  return (
+    <View style={st.root}>
+      <ScrollView
+        testID="home-scroll"
+        ref={dev.ref}
+        onContentSizeChange={dev.onContentSizeChange}
+        contentContainerStyle={{ paddingTop: Math.max(insets.top, DESIGN_TOP), paddingBottom: 22 + insets.bottom }}
+        showsVerticalScrollIndicator={false}>
+        <Glow />
+        <Header />
+        <SearchBar />
+        <Explore navigation={navigation} />
+        <Text style={[T.section, st.spotHead]}>In The Spotlight</Text>
+        <SpotlightCarousel />
+
+        <SectionHeader title="Top Recommended Gym’s" onViewAll={() => navigation.navigate('Gyms')} style={{ marginTop: 32.29 }} />
+        <Rail>
+          {TOP_GYMS.map(g => (
+            <VenueCard key={g.id} v={g} kind="gym" onPress={() => navigation.navigate('Gyms')} />
+          ))}
+        </Rail>
+
+        {showBanner ? (
+          <PersonalizeBanner onStart={() => navigation.navigate('Onboarding')} onSkip={() => setShowBanner(false)} />
+        ) : null}
+
+        <SectionHeader title="Badminton Courts Near You" onViewAll={() => navigation.navigate('Play')} style={{ marginTop: showBanner ? 35 : 28 }} />
+        <Rail gap={10}>
+          {COURTS_NEAR.map(c => (
+            <VenueCard key={c.id} v={c} kind="court" onPress={() => navigation.navigate('Play')} />
+          ))}
+        </Rail>
+
+        <SectionHeader title="Fitness Events" onViewAll={() => navigation.navigate('Events')} style={{ marginTop: 32 }} />
+        <Rail gap={10}>
+          {FITNESS_EVENTS.map(e => (
+            <EventCard key={e.id} e={e} onPress={() => navigation.navigate('EventDetails', { id: e.id })} />
+          ))}
+        </Rail>
+      </ScrollView>
+    </View>
   );
 }
 
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
-  top: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontFamily: F.headBold, fontSize: 18 },
-  greet: { color: C.sub, fontFamily: F.med, fontSize: 12 },
-  name: { color: C.text, fontFamily: F.head, fontSize: 20 },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellDot: { position: 'absolute', top: 10, right: 11, width: 7, height: 7, borderRadius: 4, backgroundColor: C.blue },
-  today: {
-    margin: PAD,
-    marginTop: 22,
-    padding: 18,
-    borderRadius: 22,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  kicker: { color: C.blue, fontFamily: F.bold, fontSize: 10, letterSpacing: 1.2 },
-  todayTitle: { color: C.text, fontFamily: F.head, fontSize: 18, marginTop: 6, maxWidth: 220 },
-  todaySub: { color: C.sub, fontFamily: F.med, fontSize: 12, marginTop: 4 },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  stats: { flexDirection: 'row', marginTop: 18, gap: 8 },
-  stat: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.bg, borderRadius: 12, padding: 10 },
-  statV: { color: C.text, fontFamily: F.semi, fontSize: 13 },
-  statU: { color: C.sub, fontFamily: F.med, fontSize: 10 },
-  week: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18, paddingHorizontal: 4 },
-  weekD: { color: C.dim, fontFamily: F.semi, fontSize: 11 },
-  weekDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#2A2A2A', marginTop: 8 },
-  weekPlanned: { backgroundColor: C.blueDim },
-  weekToday: { backgroundColor: C.blue, width: 18 },
-  section: { color: C.text, fontFamily: F.head, fontSize: 17, paddingHorizontal: PAD, marginTop: 14, marginBottom: 12 },
-  bento: { flexDirection: 'row', gap: 12, paddingHorizontal: PAD, marginBottom: 12 },
-  tile: { borderRadius: 18, overflow: 'hidden', backgroundColor: C.card },
-  tileIcon: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(15,15,15,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tileText: { position: 'absolute', left: 14, bottom: 12 },
-  tileTitle: { color: '#fff', fontFamily: F.head, fontSize: 17 },
-  tileSub: { color: '#D0D0D0', fontFamily: F.med, fontSize: 11, marginTop: 2 },
-  seeAll: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  seeAllText: { color: C.sub, fontFamily: F.med, fontSize: 12 },
-  gymRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 16,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  gymImg: { width: 56, height: 56, borderRadius: 12 },
-  gymName: { color: C.text, fontFamily: F.head, fontSize: 14 },
-  gymMeta: { color: C.sub, fontFamily: F.med, fontSize: 12, marginTop: 3 },
+  row: { flexDirection: 'row', alignItems: 'flex-start' },
+  glow: { position: 'absolute', top: 0, left: 0 },
+
+  header: { height: 45 },
+  headerPin: { position: 'absolute', left: 21, top: 11 },
+  headerText: { position: 'absolute', left: 50, top: 5.75, width: 217 },
+  headerChevron: { marginLeft: 2.36, marginTop: 5.25 },
+  address: { marginTop: 1.85 },
+  avatar: { position: 'absolute', left: 327, top: 0, width: 45, height: 45, borderRadius: 22.5 },
+
+  search: { marginTop: 30, marginLeft: 18, width: 354, height: 44 },
+  searchIcon: { position: 'absolute', left: 16, top: 12 },
+  searchText: { position: 'absolute', left: 46.94, top: 13.66 },
+
+  exploreTitle: { marginTop: 29.84, marginLeft: 18 },
+  tiles: { flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 18 },
+
+  spotHead: { marginTop: 29.92, marginLeft: 18 },
+  spotScroll: { marginTop: 14.75, height: SPOT_H },
+  spotRow: { paddingHorizontal: 92, gap: SPOT_STRIDE - SPOT_W, alignItems: 'flex-end' },
+  spot: { width: SPOT_W, height: SPOT_H, borderRadius: 14, overflow: 'hidden', transformOrigin: 'bottom' },
+  spotTitle: { marginTop: 8.03, textAlign: 'center' },
+  spotSub: { marginTop: 2.68, textAlign: 'center', color: C.muted },
+
+  rail: { paddingHorizontal: 18, gap: CARD_GAP },
+  card: { width: CARD_W, borderRadius: 24, borderWidth: 1, borderColor: C.outline, padding: 9 },
+  art148: { height: 148, borderRadius: 14, overflow: 'hidden', backgroundColor: '#000' },
+  art: { overflow: 'hidden' },
+  badge: { left: 167, top: 10.75 },
+  strip: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 20.5 },
+  cashIcon: { position: 'absolute', left: 6, top: 4.5 },
+  cashText: { position: 'absolute', left: 24, top: 5.56, color: '#FFFFFF' },
+  gymTitle: { marginTop: 10.79, width: 170 },
+  courtTitle: { marginTop: 9.87, width: 150, lineHeight: 19.75 },
+  area: { flex: 1, color: C.muted },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline' },
+  onwards: { color: C.muted, marginLeft: 6 },
+  heart: { position: 'absolute', left: 9 + 199 },
+  heartOn: { tintColor: '#EF4444' },
+
+  evDate: { marginTop: 12.34, color: C.gold },
+  evTitle: { marginTop: 3.44 },
+  evVenue: { marginTop: 4.56, color: C.muted, width: 169 },
+  evPrice: { marginTop: 5.38, color: C.muted },
+
+  banner: { marginTop: 28, marginLeft: 18, width: 354, height: 117, borderRadius: 18, overflow: 'hidden' },
+  bannerArt: { position: 'absolute', left: 214, top: 0, width: 140, height: 117 },
+  bannerTitle: { position: 'absolute', left: 14.87, top: 21.21, color: C.ink },
+  bannerSub: { position: 'absolute', left: 14.98, top: 42.34, width: 200, lineHeight: 12, color: C.inkSoft },
+  bannerActions: { position: 'absolute', left: 14.95, top: 84.73, flexDirection: 'row' },
+  bannerSkip: { marginLeft: 15.02 },
 });
